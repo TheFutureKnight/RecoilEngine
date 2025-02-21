@@ -449,42 +449,37 @@ float CQuaternion::InvSqrt(float f)
 CQuaternion CQuaternion::Lerp(const CQuaternion& q1, const CQuaternion& q2, const float a) {
 	assert(q1.Normalized());
 	assert(q2.Normalized());
-	return (q1 * (1.0f - a) + (q2 * a)).Normalize();
+	return (q1 * (1.0f - a) + (q2 * a)).ANormalize();
 }
 
-// INCORRECT, replace with the version from shader
-CQuaternion CQuaternion::SLerp(const CQuaternion& q1, const CQuaternion& q2_, const float a) {
-	assert( q1.Normalized());
-	assert(q2_.Normalized());
+CQuaternion CQuaternion::SLerp(const CQuaternion& qa, const CQuaternion& qb_, const float t) {
+	assert( qa.Normalized());
+	assert(qb_.Normalized());
 
-	if (a == 0.0f)
-		return q1;
-	else if (a == 1.0f)
-		return q2_;
+	// Calculate angle between them.
+	float cosHalfTheta = qa.x * qb_.x + qa.y * qb_.y + qa.z * qb_.z + qa.r * qb_.r;
 
-	// dot product
-	float cosTheta = (q1.x * q2_.x + q1.y * q2_.y + q1.z * q2_.z);
+	// Unfortunately every rotation can be represented by two quaternions: (++++) or (----)
+	// avoid taking the longer way: choose one representation
+	const float s = Sign(cosHalfTheta);
+	CQuaternion qb = qb_ * s;
+	cosHalfTheta *= s;
 
-	const float s = Sign(cosTheta);
+	// if qa = qb or qa = -qb then theta = 0 and we can return qa
+	if (math::fabs(cosHalfTheta) >= 1.0f) // greater-sign necessary for numerical stability
+		return qa;
 
-	CQuaternion q2 = q2_ * s;
-	cosTheta *= s;
+    // Calculate temporary values.
+    float halfTheta = math::acos(cosHalfTheta);
+    float sinHalfTheta = math::sqrt(1.0f - cosHalfTheta * cosHalfTheta); // NOTE: we checked above that |cosHalfTheta| < 1
 
-	if unlikely(cosTheta > 1.0f - float3::cmp_eps()) {
-		// Linear interpolation
-		return Lerp(q1, q2, a);
-	} else {
-		// Essential Mathematics, page 467
-		const float angle = math::acos(cosTheta);
-		const float s1 = math::sin((1.0f - a) * angle);
-		const float s2 = math::sin((       a) * angle);
+    // if theta = pi then result is not fully defined
+    // we could rotate around any axis normal to qa or qb
+    if unlikely(math::fabs(sinHalfTheta) < float3::cmp_eps())
+        return Lerp(qa, qb, 0.5f);
 
-		const float invsin = 1.0f / math::sin(angle);
-		return AssertNormalized(CQuaternion(
-			(s1 * q1.x + s2 * q2.x) * invsin,
-			(s1 * q1.y + s2 * q2.y) * invsin,
-			(s1 * q1.z + s2 * q2.z) * invsin,
-			(s1 * q1.r + s2 * q2.r) * invsin
-		));
-	}
+	const float ratioA = math::sin((1.0f - t) * halfTheta) /* / sinHalfTheta*/;
+    const float ratioB = math::sin((       t) * halfTheta) /* / sinHalfTheta*/;
+
+    return (qa * ratioA + qb * ratioB).ANormalize();
 }

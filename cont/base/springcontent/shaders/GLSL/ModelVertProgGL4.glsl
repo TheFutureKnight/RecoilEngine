@@ -194,8 +194,8 @@ vec4 SLerp(vec4 qa, vec4 qb, float t) {
     if (abs(sinHalfTheta) < 1e-3)
         return normalize(mix(qa, qb, 0.5));
 
-    float ratioA = sin((1.0 - t) * halfTheta) / sinHalfTheta;
-    float ratioB = sin((      t) * halfTheta) / sinHalfTheta;
+    float ratioA = sin((1.0 - t) * halfTheta) /* / sinHalfTheta*/;
+    float ratioB = sin((      t) * halfTheta) /* / sinHalfTheta*/;
 
     return normalize(qa * ratioA + qb * ratioB);
 }
@@ -264,24 +264,13 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 
 		weights[bi] *= float(boneTx.trSc.w > 0.0);
 
-		#if 0
-			// emulate boneTx * bposeInvTra * bposeTra * piecePos
-			vec4 txPiecePos = ApplyTransform(bposeTra, piecePos);
-			txPiecePos = ApplyTransform(bposeInvTra, txPiecePos);
-			txPiecePos = ApplyTransform(boneTx, txPiecePos);
-		#else
-			vec4 txPiecePos = ApplyTransform(ApplyTransform(boneTx, ApplyTransform(bposeInvTra, bposeTra)), piecePos);
-		#endif
+		// emulate boneTx * bposeInvTra * bposeTra * piecePos
+		vec4 txPiecePos = ApplyTransform(ApplyTransform(boneTx, ApplyTransform(bposeInvTra, bposeTra)), piecePos);
+
+		tx.trSc = vec4(0, 0, 0, 1); //nullify the transform part
 
 		// emulate boneTx * bposeInvTra * bposeTra * normal
-		tx.trSc = vec4(0, 0, 0, 1); //nullify the transform part
-		#if 0
-			vec3 txPieceNormal = ApplyTransform(bposeTra, normal);
-			txPieceNormal = ApplyTransform(bposeInvTra, txPieceNormal);
-			txPieceNormal = ApplyTransform(boneTx, txPieceNormal);
-		#else
-			vec3 txPieceNormal = ApplyTransform(ApplyTransform(boneTx, ApplyTransform(bposeInvTra, bposeTra)), normal);
-		#endif
+		vec3 txPieceNormal = ApplyTransform(ApplyTransform(boneTx, ApplyTransform(bposeInvTra, bposeTra)), normal);
 
 		msPosition += txPiecePos    * weights[bi];
 		msNormal   += txPieceNormal * weights[bi];
