@@ -475,11 +475,12 @@ CQuaternion CQuaternion::SLerp(const CQuaternion& qa, const CQuaternion& qb_, co
 
     // if theta = pi then result is not fully defined
     // we could rotate around any axis normal to qa or qb
-    if unlikely(math::fabs(sinHalfTheta) < float3::cmp_eps())
+    if unlikely(sinHalfTheta < 1e-3)
         return Lerp(qa, qb, 0.5f);
 
-	const float ratioA = math::sin((1.0f - t) * halfTheta) /* / sinHalfTheta*/;
-    const float ratioB = math::sin((       t) * halfTheta) /* / sinHalfTheta*/;
+	// both should be divided by sinHalfTheta, but makes no sense to do it due to follow up normalization
+	const float ratioA = math::sin((1.0f - t) * halfTheta);
+    const float ratioB = math::sin((       t) * halfTheta);
 
     return (qa * ratioA + qb * ratioB).ANormalize();
 }

@@ -191,11 +191,12 @@ vec4 SLerp(vec4 qa, vec4 qb, float t) {
 
     // if theta = pi then result is not fully defined
     // we could rotate around any axis normal to qa or qb
-    if (abs(sinHalfTheta) < 1e-3)
+    if (sinHalfTheta < 1e-3)
         return normalize(mix(qa, qb, 0.5));
 
-    float ratioA = sin((1.0 - t) * halfTheta) /* / sinHalfTheta*/;
-    float ratioB = sin((      t) * halfTheta) /* / sinHalfTheta*/;
+	// both should be divided by sinHalfTheta, but makes no sense to do it due to follow up normalization
+    float ratioA = sin((1.0 - t) * halfTheta);
+    float ratioB = sin((      t) * halfTheta);
 
     return normalize(qa * ratioA + qb * ratioB);
 }
