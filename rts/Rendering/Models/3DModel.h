@@ -462,7 +462,6 @@ struct LocalModelPiece
 
 
 	void SetDirty();
-	bool SetGetCustomDirty(bool cd) const;
 	void SetPosOrRot(const float3& src, float3& dst); // anim-script only
 	void SetPosition(const float3& p) { SetPosOrRot(p, pos); } // anim-script only
 	void SetRotation(const float3& r) { SetPosOrRot(r, rot); } // anim-script only
@@ -494,7 +493,7 @@ struct LocalModelPiece
 	      CollisionVolume* GetCollisionVolume()       { return &colvol; }
 
 	bool GetScriptVisible() const { return scriptSetVisible; }
-	void SetScriptVisible(bool b) { scriptSetVisible = b; SetGetCustomDirty(true); }
+	void SetScriptVisible(bool b) { scriptSetVisible = b; }
 
 	void SavePrevModelSpaceTransform() { prevModelSpaceTra = modelSpaceTra; }
 	const auto& GetPrevModelSpaceTransform() const { return prevModelSpaceTra; }

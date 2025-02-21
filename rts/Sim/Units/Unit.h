@@ -76,7 +76,7 @@ public:
 	static void InitStatic();
 
 	void SanityCheck() const;
-	void PreUpdate() { preFrameTra = Transform{ CQuaternion::MakeFrom(GetTransformMatrix(true)), pos }; }
+	void PreUpdate();
 
 	virtual void PreInit(const UnitLoadParams& params);
 	virtual void PostInit(const CUnit* builder);

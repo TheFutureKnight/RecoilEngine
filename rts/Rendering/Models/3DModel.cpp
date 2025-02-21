@@ -538,20 +538,12 @@ LocalModelPiece::LocalModelPiece(const S3DModelPiece* piece)
 void LocalModelPiece::SetDirty() {
 	RECOIL_DETAILED_TRACY_ZONE;
 	dirty = true;
-	SetGetCustomDirty(true);
 
 	for (LocalModelPiece* child: children) {
 		if (child->dirty)
 			continue;
 		child->SetDirty();
 	}
-}
-
-bool LocalModelPiece::SetGetCustomDirty(bool cd) const
-{
-	RECOIL_DETAILED_TRACY_ZONE;
-	std::swap(cd, customDirty);
-	return cd;
 }
 
 void LocalModelPiece::SetPosOrRot(const float3& src, float3& dst) {

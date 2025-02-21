@@ -88,7 +88,7 @@ CProjectile::CProjectile(
 	, myrange(/*params.weaponDef->range*/0.0f)
 	, mygravity((mapInfo != nullptr)? mapInfo->map.gravity: 0.0f)
 {
-	preFrameTra = Transform{ pos }; //rotation is not yet available here
+	preFrameTra = Transform{ CQuaternion::MakeFrom(dir), pos };
 	SetRadiusAndHeight(1.7f, 0.0f);
 	Init(owner, ZeroVector);
 }

@@ -189,38 +189,6 @@ mat3 QuaternionToRotMatrix(vec4 q) {
 	);
 }
 
-/*
-vec4 SLerp(vec4 q1, vec4 q2, float a) {
-	if (a == 0.0)
-		return q1;
-	else if (a == 1.0)
-		return q2;
-
-	// dot product
-	float cosTheta = (q1.x * q2.x + q1.y * q2.y + q1.z * q2.z);
-	float s = sign(cosTheta);
-
-	q2 *= s;
-	cosTheta *= s;
-
-	if (cosTheta > (1.0 - 1e-3)) {
-		// Linear interpolation
-		return normalize(mix(q1, q2, a));
-	}
-
-	// Essential Mathematics, page 467
-	float angle = acos(cosTheta);
-	float s1 = sin((1.0 - a) * angle);
-	float s2 = sin((      a) * angle);
-
-	return normalize(vec4(
-		(s1 * q1.x + s2 * q2.x),
-		(s1 * q1.y + s2 * q2.y),
-		(s1 * q1.z + s2 * q2.z),
-		(s1 * q1.w + s2 * q2.w)
-	));
-}
-*/
 vec4 SLerp(vec4 qa, vec4 qb, float t) {
 	// Calculate angle between them.
 	float cosHalfTheta = dot(qa, qb);
@@ -278,7 +246,7 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 		transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u],
 		timeInfo.w
 	);
-	//tx = Transform(vec4(0,0,0,1), vec4(0.0, 5.0, 0.0, 1.0));
+
 	tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u];
 
 	weights[0] *= float(tx.trSc.w > 0.0);

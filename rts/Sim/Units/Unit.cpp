@@ -1,3 +1,4 @@
+#include "Unit.h"
 /* This file is part of the Spring engine (GPL v2 or later), see LICENSE.html */
 
 #include "UnitDef.h"
@@ -182,6 +183,14 @@ void CUnit::SanityCheck() const
 		assert(pos.x <=  (float3::maxxpos * 16.0f));
 		assert(pos.z >= -(float3::maxzpos * 16.0f));
 		assert(pos.z <=  (float3::maxzpos * 16.0f));
+	}
+}
+
+void CUnit::PreUpdate()
+{
+	preFrameTra = Transform{ CQuaternion::MakeFrom(GetTransformMatrix(true)), pos };
+	for (auto& lmp : localModel.pieces) {
+		lmp.SavePrevModelSpaceTransform();
 	}
 }
 

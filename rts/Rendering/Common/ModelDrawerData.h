@@ -176,20 +176,15 @@ inline void CModelDrawerDataBase<T>::UpdateObjectTrasform(const T* o)
 
 	for (int i = 0; i < o->localModel.pieces.size(); ++i) {
 		const LocalModelPiece& lmp = o->localModel.pieces[i];
-		const bool wasCustomDirty = lmp.SetGetCustomDirty(false);
-
-		if (!wasCustomDirty)
-			continue;
 
 		if unlikely(!lmp.GetScriptVisible()) {
-			stma.UpdateForced(2 * (1 + i) + 0, Transform::Zero());
-			stma.UpdateForced(2 * (1 + i) + 1, Transform::Zero());
+			stma.UpdateIfChanged(2 * (1 + i) + 0, Transform::Zero());
+			stma.UpdateIfChanged(2 * (1 + i) + 1, Transform::Zero());
 			continue;
 		}
 
-		// UpdateIfChanged is not needed, wasCustomDirty takes that role
-		stma.UpdateForced(2 * (1 + i) + 0, lmp.GetPrevModelSpaceTransform());
-		stma.UpdateForced(2 * (1 + i) + 1, lmp.GetModelSpaceTransform());
+		stma.UpdateIfChanged(2 * (1 + i) + 0, lmp.GetPrevModelSpaceTransform());
+		stma.UpdateIfChanged(2 * (1 + i) + 1, lmp.GetModelSpaceTransform());
 	}
 
 	lastUploadFrame = gs->frameNum;
