@@ -495,7 +495,7 @@ struct LocalModelPiece
 	bool GetScriptVisible() const { return scriptSetVisible; }
 	void SetScriptVisible(bool b) { scriptSetVisible = b; }
 
-	void SavePrevModelSpaceTransform() { prevModelSpaceTra = modelSpaceTra; }
+	void SavePrevModelSpaceTransform() { prevModelSpaceTra = GetModelSpaceTransform(); }
 	const auto& GetPrevModelSpaceTransform() const { return prevModelSpaceTra; }
 private:
 	Transform prevModelSpaceTra;

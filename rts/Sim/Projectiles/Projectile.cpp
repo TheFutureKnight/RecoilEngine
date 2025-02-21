@@ -88,7 +88,8 @@ CProjectile::CProjectile(
 	, myrange(/*params.weaponDef->range*/0.0f)
 	, mygravity((mapInfo != nullptr)? mapInfo->map.gravity: 0.0f)
 {
-	preFrameTra = Transform{ CQuaternion::MakeFrom(dir), pos };
+	float3 nDir = dir; nDir.Normalize();
+	preFrameTra = Transform{ CQuaternion::MakeFrom(nDir), pos };
 	SetRadiusAndHeight(1.7f, 0.0f);
 	Init(owner, ZeroVector);
 }
@@ -130,7 +131,8 @@ void CProjectile::Init(const CUnit* owner, const float3& offset)
 	if (synced && !weapon)
 		quadField.AddProjectile(this);
 
-	preFrameTra = Transform{ CQuaternion::MakeFrom(dir), pos };
+	float3 nDir = dir; nDir.Normalize();
+	preFrameTra = Transform{ CQuaternion::MakeFrom(nDir), pos };
 }
 
 
@@ -154,7 +156,8 @@ void CProjectile::Delete()
 
 void CProjectile::PreUpdate()
 {
-	preFrameTra = Transform{ CQuaternion::MakeFrom(dir), pos };
+	float3 nDir = dir; nDir.Normalize();
+	preFrameTra = Transform{ CQuaternion::MakeFrom(nDir), pos };
 }
 
 
