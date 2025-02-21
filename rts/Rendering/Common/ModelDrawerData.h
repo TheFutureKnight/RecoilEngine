@@ -75,12 +75,13 @@ public:
 	}
 	auto& GetObjectTransformMemAlloc(const T* o) { return scTransMemAllocMap[const_cast<T*>(o)]; }
 private:
-	static constexpr int MMA_SIZE0 = 2 << 16;
+	static constexpr int MMA_SIZE0 = 2 << 17;
 protected:
 	std::array<ModelRenderContainer<T>, MODELTYPE_CNT> modelRenderers;
 
 	std::vector<T*> unsortedObjects;
 	std::unordered_map<T*, ScopedTransformMemAlloc> scTransMemAllocMap;
+	std::unordered_map<const T*, int32_t> lastSyncedFrameUpload;
 
 	bool& mtModelDrawer;
 };
@@ -125,8 +126,9 @@ inline void CModelDrawerDataBase<T>::AddObject(const T* co, bool add)
 
 	unsortedObjects.emplace_back(o);
 
-	const uint32_t numMatrices = (o->model ? o->model->numPieces : 0) + 1u;
+	const uint32_t numMatrices = ((o->model ? o->model->numPieces : 0) + 1u) * 2;
 	scTransMemAllocMap.emplace(o, ScopedTransformMemAlloc(numMatrices));
+	lastSyncedFrameUpload.emplace(o, -1);
 
 	modelUniformsStorage.AddObject(co);
 }
@@ -142,6 +144,7 @@ inline void CModelDrawerDataBase<T>::DelObject(const T* co, bool del)
 
 	if (del && spring::VectorErase(unsortedObjects, o)) {
 		scTransMemAllocMap.erase(o);
+		lastSyncedFrameUpload.erase(o);
 		modelUniformsStorage.DelObject(co);
 	}
 }
@@ -157,13 +160,19 @@ inline void CModelDrawerDataBase<T>::UpdateObject(const T* co, bool init)
 template<typename T>
 inline void CModelDrawerDataBase<T>::UpdateObjectTrasform(const T* o)
 {
+	// check if already uploaded
+	auto& lastUploadFrame = lastSyncedFrameUpload[o]; // is this MT friendly?
+	if (lastUploadFrame >= gs->frameNum)
+		return;
+
 	ScopedTransformMemAlloc& stma = GetObjectTransformMemAlloc(o);
 
-	const auto tmNew = Transform::FromMatrix(o->GetTransformMatrix());
+	const auto& tmPrev = o->preFrameTra;
+	const auto  tmCurr = Transform::FromMatrix(o->GetTransformMatrix(true)); //synced transform
 
-	// from one point it doesn't worth the comparison, cause units usually move
-	// but having not updated smma[0] allows for longer solid no-update areas in ModelUniformsUploader::UpdateDerived()
-	stma.UpdateIfChanged(0, tmNew);
+	// conditionally update new and prev synced positions
+	stma.UpdateIfChanged(0, tmPrev);
+	stma.UpdateIfChanged(1, tmCurr);
 
 	for (int i = 0; i < o->localModel.pieces.size(); ++i) {
 		const LocalModelPiece& lmp = o->localModel.pieces[i];
@@ -173,14 +182,17 @@ inline void CModelDrawerDataBase<T>::UpdateObjectTrasform(const T* o)
 			continue;
 
 		if unlikely(!lmp.GetScriptVisible()) {
-			//smma[i + 1] = CMatrix44f::Zero();
-			stma.UpdateForced(i + 1, Transform::Zero());
+			stma.UpdateForced(2 + i + 0, Transform::Zero());
+			stma.UpdateForced(2 + i + 1, Transform::Zero());
 			continue;
 		}
 
 		// UpdateIfChanged is not needed, wasCustomDirty takes that role
-		stma.UpdateForced(i + 1, lmp.GetModelSpaceTransform());
+		stma.UpdateForced(2 + i + 0, lmp.GetPrevModelSpaceTransform());
+		stma.UpdateForced(2 + i + 1, lmp.GetModelSpaceTransform());
 	}
+
+	lastUploadFrame = gs->frameNum;
 }
 
 template<typename T>

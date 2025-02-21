@@ -20,6 +20,7 @@
 
 CR_BIND(LocalModelPiece, (nullptr))
 CR_REG_METADATA(LocalModelPiece, (
+	CR_MEMBER(prevModelSpaceTra),
 	CR_MEMBER(pos),
 	CR_MEMBER(rot),
 	CR_MEMBER(dir),
@@ -422,6 +423,11 @@ void LocalModel::SetModel(const S3DModel* model, bool initialize)
 	// LocalModel::Update is never called, but they might have
 	// baked piece rotations (in the case of .dae)
 	pieces[0].UpdateChildTransformRec(false);
+
+	for (auto& piece : pieces) {
+		piece.SavePrevModelSpaceTransform();
+	}
+
 	UpdateBoundingVolume();
 
 	assert(pieces.size() == model->numPieces);
@@ -524,6 +530,7 @@ LocalModelPiece::LocalModelPiece(const S3DModelPiece* piece)
 	dir = piece->GetEmitDir(); // warning investigated, seems fake
 
 	pieceSpaceTra = CalcPieceSpaceTransform(pos, rot, original->scale);
+	prevModelSpaceTra = {};
 
 	children.reserve(piece->children.size());
 }
@@ -749,15 +756,7 @@ void S3DModel::SetPieceMatrices()
 	// use this occasion and copy bpose matrices
 	for (size_t i = 0; i < pieceObjects.size(); ++i) {
 		const auto* po = pieceObjects[i];
-		//traAlloc[0         + i] = po->bposeTransform.ToMatrix();
-		traAlloc.UpdateForced((0         + i), po->bposeTransform);
-	}
-
-	// use this occasion and copy inverse bpose matrices
-	// store them right after all bind pose matrices
-	for (size_t i = 0; i < pieceObjects.size(); ++i) {
-		const auto* po = pieceObjects[i];
-		//traAlloc[numPieces + i] = po->bposeInvTransform.ToMatrix();
-		traAlloc.UpdateForced((numPieces + i), po->bposeInvTransform);
+		traAlloc.UpdateForced(2 * i + 0, po->bposeTransform);
+		traAlloc.UpdateForced(2 * i + 1, po->bposeInvTransform);
 	}
 }

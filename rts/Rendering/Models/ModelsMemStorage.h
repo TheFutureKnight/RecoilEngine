@@ -32,15 +32,15 @@ public:
 
 	template<typename MyTypeLike = MyType> // to force universal references
 	bool UpdateIfChanged(std::size_t idx, MyTypeLike&& newValue, EqualCmpFunctor eqCmp) {
-		auto lock = CModelsLock::GetScopedLock();
+		//auto lock = CModelsLock::GetScopedLock();
 
 		using DT = StablePosAllocator<MyType>;
-		const auto& curValue = static_cast<const DT&>(storage)[idx];
+		const auto& curValue = const_cast<const DT&>(storage)[idx];
 		if (eqCmp(curValue, newValue))
 			return false;
 
 		updateList.SetUpdate(idx);
-		auto& mutValue = static_cast<DT&>(storage)[idx];
+		auto& mutValue = const_cast<DT&>(storage)[idx];
 		mutValue = newValue;
 
 		assert(updateList.Size() == storage.GetSize());
@@ -50,7 +50,7 @@ public:
 
 	template<typename MyTypeLike = MyType> // to force universal references
 	void UpdateForced(std::size_t idx, MyTypeLike&& newValue) {
-		auto lock = CModelsLock::GetScopedLock();
+		//auto lock = CModelsLock::GetScopedLock();
 
 		updateList.SetUpdate(idx);
 		auto& mutValue = storage[idx];
