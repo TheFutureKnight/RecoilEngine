@@ -83,7 +83,9 @@ layout(std140, binding = 1) uniform UniformParamsBuffer {
 	vec4 teamColor[255]; //all team colors
 };
 
-/*
+struct Quaternion {
+	vec4 q;
+};
 struct Transform {
 	vec4 quat;
 	vec4 trSc;
@@ -91,11 +93,6 @@ struct Transform {
 
 layout(std140, binding = 0) readonly buffer TransformBuffer {
 	Transform transforms[];
-};
-*/
-
-layout(std140, binding = 0) readonly buffer MatrixBuffer {
-	mat4 mat[];
 };
 
 uniform int cameraMode = 0;
@@ -149,7 +146,7 @@ vec4 MultiplyQuat(vec4 a, vec4 b)
 }
 
 vec3 RotateByQuaternion(vec4 q, vec3 v) {
-	return 2.0f * dot(q.xyz, v) * q.xyz + (q.w * q.w - dot(q.xyz, q.xyz)) * v + 2.0 * q.w * cross(q.xyz, v);
+	return 2.0 * dot(q.xyz, v) * q.xyz + (q.w * q.w - dot(q.xyz, q.xyz)) * v + 2.0 * q.w * cross(q.xyz, v);
 }
 
 vec4 RotateByQuaternion(vec4 q, vec4 v) {
@@ -174,6 +171,92 @@ Transform ApplyTransform(Transform parentTra, Transform childTra) {
 	);
 }
 
+mat3 QuaternionToRotMatrix(vec4 q) {
+	float qxx = q.x * q.x;
+	float qyy = q.y * q.y;
+	float qzz = q.z * q.z;
+	float qxz = q.x * q.z;
+	float qxy = q.x * q.y;
+	float qyz = q.y * q.z;
+	float qrx = q.w * q.x;
+	float qry = q.w * q.y;
+	float qrz = q.w * q.z;
+
+	return mat3(
+		vec3(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy + qrz)      , 2.0 * (qxz - qry)      ),
+		vec3(2.0 * (qxy - qrz)      , 1.0 - 2.0 * (qxx + qzz), 2.0 * (qyz + qrx)      ),
+		vec3(2.0 * (qxz + qry)      , 2.0 * (qyz - qrx)      , 1.0 - 2.0 * (qxx + qyy))
+	);
+}
+
+/*
+vec4 SLerp(vec4 q1, vec4 q2, float a) {
+	if (a == 0.0)
+		return q1;
+	else if (a == 1.0)
+		return q2;
+
+	// dot product
+	float cosTheta = (q1.x * q2.x + q1.y * q2.y + q1.z * q2.z);
+	float s = sign(cosTheta);
+
+	q2 *= s;
+	cosTheta *= s;
+
+	if (cosTheta > (1.0 - 1e-3)) {
+		// Linear interpolation
+		return normalize(mix(q1, q2, a));
+	}
+
+	// Essential Mathematics, page 467
+	float angle = acos(cosTheta);
+	float s1 = sin((1.0 - a) * angle);
+	float s2 = sin((      a) * angle);
+
+	return normalize(vec4(
+		(s1 * q1.x + s2 * q2.x),
+		(s1 * q1.y + s2 * q2.y),
+		(s1 * q1.z + s2 * q2.z),
+		(s1 * q1.w + s2 * q2.w)
+	));
+}
+*/
+vec4 SLerp(vec4 qa, vec4 qb, float t) {
+	// Calculate angle between them.
+	float cosHalfTheta = dot(qa, qb);
+
+    // Unfortunately every rotation can be represented by two quaternions: (++++) or (----)
+    // avoid taking the longer way: choose one representation
+	float s = sign(cosHalfTheta);
+	qb *= s;
+	cosHalfTheta *= s;
+
+    // if qa = qb or qa = -qb then theta = 0 and we can return qa
+    if (abs(cosHalfTheta) >= 1.0) // greater-sign necessary for numerical stability
+        return qa;
+
+    // Calculate temporary values.
+    float halfTheta = acos(cosHalfTheta);
+    float sinHalfTheta = sqrt(1.0 - cosHalfTheta * cosHalfTheta); // NOTE: we checked above that |cosHalfTheta| < 1
+
+    // if theta = pi then result is not fully defined
+    // we could rotate around any axis normal to qa or qb
+    if (abs(sinHalfTheta) < 1e-3)
+        return normalize(mix(qa, qb, 0.5));
+
+    float ratioA = sin((1.0 - t) * halfTheta) / sinHalfTheta;
+    float ratioB = sin((      t) * halfTheta) / sinHalfTheta;
+
+    return normalize(qa * ratioA + qb * ratioB);
+}
+
+Transform Lerp(Transform t0, Transform t1, float a) {
+	return Transform(
+		SLerp(t0.quat, t1.quat, a),
+		mix(t0.trSc, t1.trSc, a)
+	);
+}
+
 void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 {
 	bool staticModel = (matrixMode > 0);
@@ -181,20 +264,27 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 	vec4 piecePos = vec4(pos, 1.0);
 
 	vec4 weights = vec4(
-		float(GetUnpackedValue(bonesInfo.y, 0)) / 255.0,
-		float(GetUnpackedValue(bonesInfo.y, 1)) / 255.0,
-		float(GetUnpackedValue(bonesInfo.y, 2)) / 255.0,
-		float(GetUnpackedValue(bonesInfo.y, 3)) / 255.0
+		float(GetUnpackedValue(bonesInfo.y, 0u)) / 255.0,
+		float(GetUnpackedValue(bonesInfo.y, 1u)) / 255.0,
+		float(GetUnpackedValue(bonesInfo.y, 2u)) / 255.0,
+		float(GetUnpackedValue(bonesInfo.y, 3u)) / 255.0
 	);
 
-	uint b0 = GetUnpackedValue(bonesInfo.x, 0) + (GetUnpackedValue(bonesInfo.z, 0) << 8u); //first boneID
-	mat4 b0BoneMat = mat[instData.x + b0 + uint(!staticModel)];
-	mat3 b0NormMat = mat3(b0BoneMat);
+	uint bID0 = GetUnpackedValue(bonesInfo.x, 0u) + (GetUnpackedValue(bonesInfo.z, 0u) << 8u); //first boneID
+	
+	// do interpolation
+	Transform tx = Lerp(
+		transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u],
+		transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u],
+		timeInfo.w
+	);
+	//tx = Transform(vec4(0,0,0,1), vec4(0.0, 5.0, 0.0, 1.0));
+	tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u];
 
-	weights[0] *= b0BoneMat[3][3];
-
-	msPosition = b0BoneMat * piecePos;
-	msNormal   = b0NormMat * normal;
+	weights[0] *= float(tx.trSc.w > 0.0);
+	msPosition = ApplyTransform(tx, piecePos);
+	tx.trSc = vec4(0, 0, 0, 1); //nullify the transform part
+	msNormal = ApplyTransform(tx, normal);
 
 	if (staticModel || weights[0] == 1.0)
 		return;
@@ -205,8 +295,8 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 	msNormal   *= weights[0];
 	wSum       += weights[0];
 
-	uint numPieces = (GetUnpackedValue(instData.z, 2) << 8u) + GetUnpackedValue(instData.z, 3);
-	mat4 bposeMat    = mat[instData.w + b0];
+	//uint numPieces = (GetUnpackedValue(instData.z, 2u) << 8u) + GetUnpackedValue(instData.z, 3u);
+	Transform bposeTra = transforms[instData.w + 2u * bID0];
 
 	// Vertex[ModelSpace,BoneX] = PieceMat[BoneX] * InverseBindPosMat[BoneX] * BindPosMat[Bone0] * Vertex[Bone0]
 	for (uint bi = 1; bi < 3; ++bi) {
@@ -215,16 +305,28 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 		if (bID == 0xFFFFu || weights[bi] == 0.0)
 			continue;
 
-		mat4 bposeInvMat = mat[instData.w + numPieces + bID];
-		mat4 boneMat     = mat[instData.x +        1u + bID];
+		Transform bposeInvTra = transforms[instData.w + 2u * bID + 1u];
+		Transform boneTx = Lerp(
+			transforms[instData.x + 2u * bID + 0u],
+			transforms[instData.x + 2u * bID + 1u],
+			timeInfo.w
+		);
 
-		weights[bi] *= boneMat[3][3];
+		weights[bi] *= float(boneTx.trSc.w > 0.0);
 
-		mat4 skinMat = boneMat * bposeInvMat * bposeMat;
-		mat3 normMat = mat3(skinMat);
+		// emulate boneTx * bposeInvTra * bposeTra * piecePos
+		vec4 txPiecePos = ApplyTransform(bposeTra, piecePos);
+		txPiecePos = ApplyTransform(bposeInvTra, txPiecePos);
+		txPiecePos = ApplyTransform(boneTx, txPiecePos);
 
-		msPosition += skinMat * piecePos * weights[bi];
-		msNormal   += normMat * normal   * weights[bi];
+		// emulate boneTx * bposeInvTra * bposeTra * normal
+		tx.trSc = vec4(0, 0, 0, 1); //nullify the transform part
+		vec3 txPieceNormal = ApplyTransform(bposeTra, normal);
+		txPieceNormal = ApplyTransform(bposeInvTra, txPieceNormal);
+		txPieceNormal = ApplyTransform(boneTx, txPieceNormal);
+
+		msPosition += txPiecePos    * weights[bi];
+		msNormal   += txPieceNormal * weights[bi];
 		wSum       += weights[bi];
 	}
 
@@ -236,14 +338,25 @@ void main(void)
 {
 	bool staticModel = (matrixMode > 0);
 
-	mat4 worldMatrix = staticModel ? staticModelMatrix : mat[instData.x]; //don't cover ARRAY_MATMODE yet
-
 	vec4 modelPos;
 	vec3 modelNormal;
 	GetModelSpaceVertex(modelPos, modelNormal);
 
-	worldPos = worldMatrix * modelPos;
-	worldNormal = mat3(worldMatrix) * modelNormal;
+	if (staticModel) {
+		worldPos = staticModelMatrix * modelPos;
+		worldNormal = mat3(staticModelMatrix) * modelNormal;
+	} else {
+		// do interpolation
+		Transform tx = Lerp(
+			transforms[instData.x + 0u],
+			transforms[instData.x + 1u],
+			timeInfo.w
+		);
+
+		worldPos = ApplyTransform(tx, modelPos);
+		tx.trSc = vec4(0, 0, 0, 1); //nullify the transform part
+		worldNormal = ApplyTransform(tx, modelNormal);
+	}
 
 	gl_ClipDistance[0] = dot(modelPos, clipPlane0); //upper construction clip plane
 	gl_ClipDistance[1] = dot(modelPos, clipPlane1); //lower construction clip plane

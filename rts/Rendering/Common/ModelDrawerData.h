@@ -182,14 +182,14 @@ inline void CModelDrawerDataBase<T>::UpdateObjectTrasform(const T* o)
 			continue;
 
 		if unlikely(!lmp.GetScriptVisible()) {
-			stma.UpdateForced(2 + i + 0, Transform::Zero());
-			stma.UpdateForced(2 + i + 1, Transform::Zero());
+			stma.UpdateForced(2 * (1 + i) + 0, Transform::Zero());
+			stma.UpdateForced(2 * (1 + i) + 1, Transform::Zero());
 			continue;
 		}
 
 		// UpdateIfChanged is not needed, wasCustomDirty takes that role
-		stma.UpdateForced(2 + i + 0, lmp.GetPrevModelSpaceTransform());
-		stma.UpdateForced(2 + i + 1, lmp.GetModelSpaceTransform());
+		stma.UpdateForced(2 * (1 + i) + 0, lmp.GetPrevModelSpaceTransform());
+		stma.UpdateForced(2 * (1 + i) + 1, lmp.GetModelSpaceTransform());
 	}
 
 	lastUploadFrame = gs->frameNum;

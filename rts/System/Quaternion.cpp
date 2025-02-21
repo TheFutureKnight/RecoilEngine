@@ -452,6 +452,7 @@ CQuaternion CQuaternion::Lerp(const CQuaternion& q1, const CQuaternion& q2, cons
 	return (q1 * (1.0f - a) + (q2 * a)).Normalize();
 }
 
+// INCORRECT, replace with the version from shader
 CQuaternion CQuaternion::SLerp(const CQuaternion& q1, const CQuaternion& q2_, const float a) {
 	assert( q1.Normalized());
 	assert(q2_.Normalized());
