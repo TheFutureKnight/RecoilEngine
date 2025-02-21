@@ -122,7 +122,7 @@ out Data {
 };
 out float gl_ClipDistance[3];
 
-#line 1117
+#line 1125
 
 void TransformPlayerCam(vec4 worldPos) {
 	gl_Position = cameraViewProj * worldPos;
@@ -168,24 +168,6 @@ Transform ApplyTransform(Transform parentTra, Transform childTra) {
 			parentTra.trSc.xyz + RotateByQuaternion(parentTra.quat, parentTra.trSc.w * childTra.trSc.xyz),
 			parentTra.trSc.w * childTra.trSc.w
 		)
-	);
-}
-
-mat3 QuaternionToRotMatrix(vec4 q) {
-	float qxx = q.x * q.x;
-	float qyy = q.y * q.y;
-	float qzz = q.z * q.z;
-	float qxz = q.x * q.z;
-	float qxy = q.x * q.y;
-	float qyz = q.y * q.z;
-	float qrx = q.w * q.x;
-	float qry = q.w * q.y;
-	float qrz = q.w * q.z;
-
-	return mat3(
-		vec3(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy + qrz)      , 2.0 * (qxz - qry)      ),
-		vec3(2.0 * (qxy - qrz)      , 1.0 - 2.0 * (qxx + qzz), 2.0 * (qyz + qrx)      ),
-		vec3(2.0 * (qxz + qry)      , 2.0 * (qyz - qrx)      , 1.0 - 2.0 * (qxx + qyy))
 	);
 }
 
@@ -282,16 +264,24 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 
 		weights[bi] *= float(boneTx.trSc.w > 0.0);
 
-		// emulate boneTx * bposeInvTra * bposeTra * piecePos
-		vec4 txPiecePos = ApplyTransform(bposeTra, piecePos);
-		txPiecePos = ApplyTransform(bposeInvTra, txPiecePos);
-		txPiecePos = ApplyTransform(boneTx, txPiecePos);
+		#if 0
+			// emulate boneTx * bposeInvTra * bposeTra * piecePos
+			vec4 txPiecePos = ApplyTransform(bposeTra, piecePos);
+			txPiecePos = ApplyTransform(bposeInvTra, txPiecePos);
+			txPiecePos = ApplyTransform(boneTx, txPiecePos);
+		#else
+			vec4 txPiecePos = ApplyTransform(ApplyTransform(boneTx, ApplyTransform(bposeInvTra, bposeTra)), piecePos);
+		#endif
 
 		// emulate boneTx * bposeInvTra * bposeTra * normal
 		tx.trSc = vec4(0, 0, 0, 1); //nullify the transform part
-		vec3 txPieceNormal = ApplyTransform(bposeTra, normal);
-		txPieceNormal = ApplyTransform(bposeInvTra, txPieceNormal);
-		txPieceNormal = ApplyTransform(boneTx, txPieceNormal);
+		#if 0
+			vec3 txPieceNormal = ApplyTransform(bposeTra, normal);
+			txPieceNormal = ApplyTransform(bposeInvTra, txPieceNormal);
+			txPieceNormal = ApplyTransform(boneTx, txPieceNormal);
+		#else
+			vec3 txPieceNormal = ApplyTransform(ApplyTransform(boneTx, ApplyTransform(bposeInvTra, bposeTra)), normal);
+		#endif
 
 		msPosition += txPiecePos    * weights[bi];
 		msNormal   += txPieceNormal * weights[bi];
