@@ -1,3 +1,4 @@
+#include "UnitHandler.h"
 /* This file is part of the Spring engine (GPL v2 or later), see LICENSE.html */
 
 #include <cassert>
@@ -460,7 +461,14 @@ void CUnitHandler::Update()
 	inUpdateCall = false;
 }
 
+void CUnitHandler::UpdatePostAnimation()
+{
+	SCOPED_TIMER("Sim::Unit::UpdatePostAnimation");
 
+	for (auto* unit : activeUnits) {
+		unit->UpdateTransportees();
+	}
+}
 
 void CUnitHandler::AddBuilderCAI(CBuilderCAI* b)
 {
