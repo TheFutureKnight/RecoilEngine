@@ -160,7 +160,6 @@ private:
 public:
 	void Init();
 	void Kill();
-	void Reset();
 public:
 	size_t AddObject(const CWorldObject* o);
 	size_t GetObjOffset(const CWorldObject* o);

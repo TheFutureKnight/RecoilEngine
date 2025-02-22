@@ -1004,6 +1004,9 @@ void CGame::KillRendering()
 	spring::SafeDelete(geometricObjects);
 	worldDrawer.Kill();
 
+	modelUniformsStorage.Kill();
+	//transformsMemStorage.Kill(); //Add?
+
 	transformsUploader.Kill();
 	modelUniformsUploader.Kill();
 }
@@ -1047,9 +1050,6 @@ void CGame::KillSimulation()
 	featureHandler.Kill(); // depends on unitHandler (via ~CFeature)
 	unitHandler.Kill();
 	projectileHandler.Kill();
-
-	modelUniformsStorage.Kill();
-	//transformsMemStorage.Kill(); //Add?
 
 	LOG("[Game::%s][3]", __func__);
 	IPathManager::FreeInstance(pathManager);

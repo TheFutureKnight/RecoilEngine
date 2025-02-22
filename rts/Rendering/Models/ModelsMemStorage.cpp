@@ -25,12 +25,6 @@ void ModelUniformsStorage::Kill()
 	objectsMap.clear();
 }
 
-void ModelUniformsStorage::Reset()
-{
-	Kill();
-	Init();
-}
-
 size_t ModelUniformsStorage::AddObject(const CWorldObject* o)
 {
 	RECOIL_DETAILED_TRACY_ZONE;
