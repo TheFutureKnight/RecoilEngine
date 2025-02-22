@@ -223,14 +223,18 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 
 	uint bID0 = GetUnpackedValue(bonesInfo.x, 0u) + (GetUnpackedValue(bonesInfo.z, 0u) << 8u); //first boneID
 	
-	// do interpolation
-	Transform tx = Lerp(
-		transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u],
-		transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u],
-		timeInfo.w
-	);
-
-	//tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u];
+	Transform tx;
+	if (staticModel) {
+		tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u];
+	} else {
+		// do interpolation
+		tx = Lerp(
+			transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u],
+			transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u],
+			timeInfo.w
+		);
+		//tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u];
+	}
 
 	weights[0] *= float(tx.trSc.w > 0.0);
 	msPosition = ApplyTransform(tx, piecePos);

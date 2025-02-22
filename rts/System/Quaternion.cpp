@@ -292,6 +292,7 @@ CQuaternion& CQuaternion::ANormalize()
 /// </summary>
 float4 CQuaternion::ToAxisAndAngle() const
 {
+	assert(Normalized());
 	return float4(
 		float3(x, y, z) * InvSqrt(std::max(0.0f, 1.0f - r * r)),
 		2.0f * math::acos(std::clamp(r, -1.0f, 1.0f))
@@ -475,7 +476,7 @@ CQuaternion CQuaternion::SLerp(const CQuaternion& qa, const CQuaternion& qb_, co
 
     // if theta = pi then result is not fully defined
     // we could rotate around any axis normal to qa or qb
-    if unlikely(sinHalfTheta < 1e-3)
+    if unlikely(sinHalfTheta < 1e-3f)
         return Lerp(qa, qb, 0.5f);
 
 	// both should be divided by sinHalfTheta, but makes no sense to do it due to follow up normalization
