@@ -110,8 +110,26 @@ Transform Transform::Lerp(const Transform& t0, const Transform& t1, float a)
 
 Transform Transform::InvertAffine() const
 {
+	if (s <= float3::cmp_eps())
+		return *this;
+
 	// TODO check correctness
 	const auto invR = r.Inverse();
+	const auto invS = 1.0f / s;
+	return Transform{
+		invR,
+		invR.Rotate(-t * invS),
+		invS,
+	};
+}
+
+Transform Transform::InvertAffineNormalized() const
+{
+	if (s <= float3::cmp_eps())
+		return *this;
+
+	// TODO check correctness
+	const auto invR = r.InverseNormalized();
 	const auto invS = 1.0f / s;
 	return Transform{
 		invR,

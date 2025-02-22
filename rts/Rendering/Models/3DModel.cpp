@@ -252,14 +252,6 @@ void S3DModelPiece::SetPieceTransform(const Transform& parentTra)
 		scale
 	};
 
-	bposeInvTransform = bposeTransform.InvertAffine();
-#ifdef _DEBUG
-	auto bposeMat = bposeTransform.ToMatrix();
-	auto bposeInvMat = bposeMat.Invert();
-	auto bposeInvTransform2 = Transform::FromMatrix(bposeInvMat);
-	assert(bposeInvTransform.equals(bposeInvTransform2));
-#endif // _DEBUG
-
 	for (S3DModelPiece* c : children) {
 		c->SetPieceTransform(bposeTransform);
 	}
@@ -267,8 +259,6 @@ void S3DModelPiece::SetPieceTransform(const Transform& parentTra)
 
 Transform S3DModelPiece::ComposeTransform(const float3& t, const float3& r, float s) const
 {
-	// TODO: Remove ToMatrix() / FromMatrix() non-sense
-
 	// NOTE:
 	//   ORDER MATTERS (T(baked + script) * R(baked) * R(script) * S(baked))
 	//   translating + rotating + scaling is faster than matrix-multiplying
@@ -280,39 +270,6 @@ Transform S3DModelPiece::ComposeTransform(const float3& t, const float3& r, floa
 		tra *= bakedTransform;
 
 	tra *= Transform(CQuaternion::FromEulerYPRNeg(-r), ZeroVector, s);
-#ifdef _DEBUG
-	/*
-	{
-		auto rngAngles = guRNG.NextVector(2.0f * math::PI);
-		auto delMe = CQuaternion::FromEulerPYRNeg(rngAngles);
-		CMatrix44f mdel; mdel.RotateEulerXYZ(rngAngles);
-		CQuaternion delMe2;
-		std::tie(std::ignore, delMe2, std::ignore) = CQuaternion::DecomposeIntoTRS(mdel);
-		assert(delMe.equals(delMe2));
-	}
-	{
-		auto rngAngles = guRNG.NextVector(2.0f * math::PI);
-		auto delMe = CQuaternion::FromEulerYPRNeg(rngAngles);
-		CMatrix44f mdel; mdel.RotateEulerYXZ(rngAngles);
-		CQuaternion delMe2;
-		std::tie(std::ignore, delMe2, std::ignore) = CQuaternion::DecomposeIntoTRS(mdel);
-		assert(delMe.equals(delMe2));
-	}
-	*/
-	CMatrix44f m;
-	m.SetPos(t);
-
-	if (hasBakedTra)
-		m *= bakedTransform.ToMatrix();
-
-	// default Spring rotation-order [YPR=Y,X,Z]
-	m.RotateEulerYXZ(-r);
-	m.Scale(s);
-
-	auto tra2 = Transform::FromMatrix(m);
-
-	assert(tra.equals(tra2));
-#endif
 	return tra;
 }
 
@@ -748,7 +705,6 @@ void S3DModel::SetPieceMatrices()
 	// use this occasion and copy bpose matrices
 	for (size_t i = 0; i < pieceObjects.size(); ++i) {
 		const auto* po = pieceObjects[i];
-		traAlloc.UpdateForced(2 * i + 0, po->bposeTransform);
-		traAlloc.UpdateForced(2 * i + 1, po->bposeInvTransform);
+		traAlloc.UpdateForced(i, po->bposeTransform);
 	}
 }

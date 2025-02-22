@@ -58,6 +58,9 @@ struct Transform {
 	// similar to CMatrix44f::InvertAffine, except with scale()
 	Transform InvertAffine() const;
 
+	// similar to InvertAffine, except the quaternion is assumed to be normalized
+	Transform InvertAffineNormalized() const;
+
 	bool equals(const Transform& tra) const;
 
 	Transform operator*(const Transform& childTra) const;

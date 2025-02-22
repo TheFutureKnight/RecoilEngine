@@ -135,6 +135,10 @@ vec4 RotateByQuaternion(vec4 q, vec4 v) {
 	return vec4(RotateByQuaternion(q, v.xyz), v.w);
 }
 
+vec4 InvertNormalizedQuaternion(vec4 q) {
+	return vec4(-q.x, -q.y, -q.z, q.w);
+}
+
 vec3 ApplyTransform(Transform tra, vec3 v) {
 	return RotateByQuaternion(tra.quat, v * tra.trSc.w) + tra.trSc.xyz;
 }
@@ -149,6 +153,18 @@ Transform ApplyTransform(Transform parentTra, Transform childTra) {
 		vec4(
 			parentTra.trSc.xyz + RotateByQuaternion(parentTra.quat, parentTra.trSc.w * childTra.trSc.xyz),
 			parentTra.trSc.w * childTra.trSc.w
+		)
+	);
+}
+
+Transform InvertTransformAffine(Transform tra) {
+	vec4 invR = InvertNormalizedQuaternion(tra.quat);
+	float invS = 1.0 / tra.trSc.w;
+	return Transform(
+		invR,
+		vec4(
+			RotateByQuaternion(invR, -tra.trSc.xyz * invS),
+			invS
 		)
 	);
 }
@@ -236,7 +252,8 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 		if (bID == 0xFFFFu || weights[bi] == 0.0)
 			continue;
 
-		Transform bposeInvTra = transforms[instData.w + 2u * bID + 1u];
+		//Transform bposeInvTra = transforms[instData.w + 2u * bID + 1u];
+		Transform bposeInvTra = InvertTransformAffine(transforms[instData.w + 2u * bID + 0u]);
 		Transform boneTx = Lerp(
 			transforms[instData.x + 2u * (1u + bID) + 0u],
 			transforms[instData.x + 2u * (1u + bID) + 1u],

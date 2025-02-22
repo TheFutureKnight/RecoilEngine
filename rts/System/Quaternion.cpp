@@ -381,7 +381,20 @@ CQuaternion& CQuaternion::InverseInPlace()
 
 	*this = Conjugate() / sqn; // aparently not math::sqrt(sqn)
 	return *this;
-};
+}
+
+CQuaternion CQuaternion::InverseNormalized() const
+{
+	CQuaternion inv = *this;
+	inv.InverseInPlaceNormalized();
+	return inv;
+}
+
+CQuaternion& CQuaternion::InverseInPlaceNormalized()
+{
+	assert(Normalized());
+	return Conjugate();
+}
 
 CQuaternion CQuaternion::operator*(const CQuaternion& rhs) const
 {

@@ -67,6 +67,8 @@ public:
 	constexpr CQuaternion& Conjugate() { x = -x; y = -y; z = -z; return *this; }
 	CQuaternion  Inverse() const;
 	CQuaternion& InverseInPlace();
+	CQuaternion  InverseNormalized() const;
+	CQuaternion& InverseInPlaceNormalized();
 
 	float4 ToAxisAndAngle() const;
 	CMatrix44f ToRotMatrix() const;

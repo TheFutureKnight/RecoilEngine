@@ -161,7 +161,6 @@ struct S3DModelPiece {
 		colvol = {};
 
 		bposeTransform.LoadIdentity();
-		bposeInvTransform.LoadIdentity();
 		bakedTransform.LoadIdentity();
 
 		offset = ZeroVector;
@@ -231,7 +230,6 @@ public:
 	CollisionVolume colvol;
 
 	Transform bposeTransform;    /// bind-pose transform, including baked rots
-	Transform bposeInvTransform; /// Inverse of bind-pose transform, including baked rots
 	Transform bakedTransform;    /// baked local-space rotations
 
 	float3 offset;      /// local (piece-space) offset wrt. parent piece
@@ -355,7 +353,7 @@ struct S3DModel
 
 		// force mutex just in case this is called from modelLoader.ProcessVertices()
 		// TODO: pass to S3DModel if it is created from LoadModel(ST) or from ProcessVertices(MT)
-		traAlloc = ScopedTransformMemAlloc(2 * numPieces);
+		traAlloc = ScopedTransformMemAlloc(numPieces);
 
 		std::vector<S3DModelPiece*> stack = { root };
 

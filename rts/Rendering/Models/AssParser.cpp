@@ -156,24 +156,8 @@ struct SPseudoAssPiece {
 		hasBakedTra = !tra.IsIdentity();
 	}
 
-	// copy of S3DModelPiece::ComposeTransform()
-	CMatrix44f ComposeTransform(const float3& t, const float3& r, const float3& s) const {
-		CMatrix44f m;
-
-		// NOTE:
-		//   ORDER MATTERS (T(baked + script) * R(baked) * R(script) * S(baked))
-		//   translating + rotating + scaling is faster than matrix-multiplying
-		//   m is identity so m.SetPos(t)==m.Translate(t) but with fewer instrs
-		m.SetPos(t);
-
-		if (hasBakedTra)
-			m *= bakedTransform.ToMatrix();
-
-		// default Spring rotation-order [YPR=Y,X,Z]
-		m.RotateEulerYXZ(-r);
-		m.Scale(s);
-		return m;
-	}
+	// copy of S3DModelPiece::ComposeTransform(), unused?
+	Transform ComposeTransform(const float3& t, const float3& r, float s) const;
 
 	// copy of S3DModelPiece::SetPieceTransform()
 	// except there's no need to do it recursively
@@ -438,9 +422,9 @@ void CAssParser::CalculateModelMeshBounds(S3DModel* model, const aiScene* scene)
 }
 */
 
-namespace {
+namespace Impl {
 	template<typename PieceObject>
-	void LoadPieceTransformationsImpl(
+	void LoadPieceTransformations(
 		PieceObject* piece,
 		const S3DModel* model,
 		const aiNode* pieceNode,
@@ -534,7 +518,7 @@ void CAssParser::LoadPieceTransformations(
 	const LuaTable& pieceTable
 ) {
 	RECOIL_DETAILED_TRACY_ZONE;
-	LoadPieceTransformationsImpl<SAssPiece>(piece, model, pieceNode, pieceTable);
+	Impl::LoadPieceTransformations<SAssPiece>(piece, model, pieceNode, pieceTable);
 }
 
 void CAssParser::LoadPieceTransformations(
@@ -544,7 +528,7 @@ void CAssParser::LoadPieceTransformations(
 	const LuaTable& pieceTable
 ) {
 	RECOIL_DETAILED_TRACY_ZONE;
-	LoadPieceTransformationsImpl<SPseudoAssPiece>(piece, model, pieceNode, pieceTable);
+	Impl::LoadPieceTransformations<SPseudoAssPiece>(piece, model, pieceNode, pieceTable);
 }
 
 void CAssParser::UpdatePiecesMinMaxExtents(S3DModel* model)
@@ -1435,6 +1419,22 @@ void CAssParser::FindTextures(
 	// 3. try to load from metafile (highest priority)
 	model->texs[0] = FindTexture(modelTable.GetString("tex1", ""), modelPath, model->texs[0]);
 	model->texs[1] = FindTexture(modelTable.GetString("tex2", ""), modelPath, model->texs[1]);
+}
+
+Transform SPseudoAssPiece::ComposeTransform(const float3& t, const float3& r, float s) const
+{
+	// NOTE:
+	//   ORDER MATTERS (T(baked + script) * R(baked) * R(script) * S(baked))
+	//   translating + rotating + scaling is faster than matrix-multiplying
+	//   m is identity so m.SetPos(t)==m.Translate(t) but with fewer instrs
+	Transform tra;
+	tra.t = t;
+
+	if (hasBakedTra)
+		tra *= bakedTransform;
+
+	tra *= Transform(CQuaternion::FromEulerYPRNeg(-r), ZeroVector, s);
+	return tra;
 }
 
 void SPseudoAssPiece::SetPieceTransform(const Transform& tra)
