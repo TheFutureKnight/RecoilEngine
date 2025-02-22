@@ -83,9 +83,6 @@ layout(std140, binding = 1) uniform UniformParamsBuffer {
 	vec4 teamColor[255]; //all team colors
 };
 
-struct Quaternion {
-	vec4 q;
-};
 struct Transform {
 	vec4 quat;
 	vec4 trSc;
@@ -122,7 +119,7 @@ out Data {
 };
 out float gl_ClipDistance[3];
 
-#line 1125
+#line 1122
 
 void TransformPlayerCam(vec4 worldPos) {
 	gl_Position = cameraViewProj * worldPos;
@@ -262,8 +259,8 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 
 		Transform bposeInvTra = transforms[instData.w + 2u * bID + 1u];
 		Transform boneTx = Lerp(
-			transforms[instData.x + 2u * bID + 0u],
-			transforms[instData.x + 2u * bID + 1u],
+			transforms[instData.x + 2u * (1u + bID) + 0u],
+			transforms[instData.x + 2u * (1u + bID) + 1u],
 			timeInfo.w
 		);
 
