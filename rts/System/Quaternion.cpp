@@ -483,18 +483,18 @@ CQuaternion CQuaternion::SLerp(const CQuaternion& qa, const CQuaternion& qb_, co
 	if (math::fabs(cosHalfTheta) >= 1.0f) // greater-sign necessary for numerical stability
 		return qa;
 
-    // Calculate temporary values.
-    float halfTheta = math::acos(cosHalfTheta);
-    float sinHalfTheta = math::sqrt(1.0f - cosHalfTheta * cosHalfTheta); // NOTE: we checked above that |cosHalfTheta| < 1
+	// Calculate temporary values.
+	float halfTheta = math::acos(cosHalfTheta);
+	float sinHalfTheta = math::sqrt(1.0f - cosHalfTheta * cosHalfTheta); // NOTE: we checked above that |cosHalfTheta| < 1
 
-    // if theta = pi then result is not fully defined
-    // we could rotate around any axis normal to qa or qb
-    if unlikely(sinHalfTheta < 1e-3f)
-        return Lerp(qa, qb, 0.5f);
+	// if theta = pi then result is not fully defined
+	// we could rotate around any axis normal to qa or qb
+	if unlikely(sinHalfTheta < 1e-3f)
+		return Lerp(qa, qb, 0.5f);
 
 	// both should be divided by sinHalfTheta, but makes no sense to do it due to follow up normalization
 	const float ratioA = math::sin((1.0f - t) * halfTheta);
-    const float ratioB = math::sin((       t) * halfTheta);
+	const float ratioB = math::sin((       t) * halfTheta);
 
-    return (qa * ratioA + qb * ratioB).ANormalize();
+	return (qa * ratioA + qb * ratioB).ANormalize();
 }

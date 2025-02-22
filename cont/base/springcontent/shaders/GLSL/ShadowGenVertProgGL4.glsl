@@ -173,30 +173,30 @@ vec4 SLerp(vec4 qa, vec4 qb, float t) {
 	// Calculate angle between them.
 	float cosHalfTheta = dot(qa, qb);
 
-    // Unfortunately every rotation can be represented by two quaternions: (++++) or (----)
-    // avoid taking the longer way: choose one representation
+	// Unfortunately every rotation can be represented by two quaternions: (++++) or (----)
+	// avoid taking the longer way: choose one representation
 	float s = sign(cosHalfTheta);
 	qb *= s;
 	cosHalfTheta *= s;
 
-    // if qa = qb or qa = -qb then theta = 0 and we can return qa
-    if (abs(cosHalfTheta) >= 1.0) // greater-sign necessary for numerical stability
-        return qa;
+	// if qa = qb or qa = -qb then theta = 0 and we can return qa
+	if (abs(cosHalfTheta) >= 1.0) // greater-sign necessary for numerical stability
+		return qa;
 
-    // Calculate temporary values.
-    float halfTheta = acos(cosHalfTheta);
-    float sinHalfTheta = sqrt(1.0 - cosHalfTheta * cosHalfTheta); // NOTE: we checked above that |cosHalfTheta| < 1
+	// Calculate temporary values.
+	float halfTheta = acos(cosHalfTheta);
+	float sinHalfTheta = sqrt(1.0 - cosHalfTheta * cosHalfTheta); // NOTE: we checked above that |cosHalfTheta| < 1
 
-    // if theta = pi then result is not fully defined
-    // we could rotate around any axis normal to qa or qb
-    if (sinHalfTheta < 1e-3)
-        return normalize(mix(qa, qb, 0.5));
+	// if theta = pi then result is not fully defined
+	// we could rotate around any axis normal to qa or qb
+	if (sinHalfTheta < 1e-3)
+		return normalize(mix(qa, qb, 0.5));
 
 	// both should be divided by sinHalfTheta, but makes no sense to do it due to follow up normalization
-    float ratioA = sin((1.0 - t) * halfTheta);
-    float ratioB = sin((      t) * halfTheta);
+	float ratioA = sin((1.0 - t) * halfTheta);
+	float ratioB = sin((      t) * halfTheta);
 
-    return normalize(qa * ratioA + qb * ratioB);
+	return normalize(qa * ratioA + qb * ratioB);
 }
 
 Transform Lerp(Transform t0, Transform t1, float a) {
@@ -242,8 +242,7 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 	msNormal   *= weights[0];
 	wSum       += weights[0];
 
-	//uint numPieces = (GetUnpackedValue(instData.z, 2u) << 8u) + GetUnpackedValue(instData.z, 3u);
-	Transform bposeTra = transforms[instData.w + 2u * bID0];
+	Transform bposeTra = transforms[instData.w + bID0];
 
 	// Vertex[ModelSpace,BoneX] = PieceMat[BoneX] * InverseBindPosMat[BoneX] * BindPosMat[Bone0] * Vertex[Bone0]
 	for (uint bi = 1; bi < 3; ++bi) {
@@ -252,8 +251,7 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 		if (bID == 0xFFFFu || weights[bi] == 0.0)
 			continue;
 
-		//Transform bposeInvTra = transforms[instData.w + 2u * bID + 1u];
-		Transform bposeInvTra = InvertTransformAffine(transforms[instData.w + 2u * bID + 0u]);
+		Transform bposeInvTra = InvertTransformAffine(transforms[instData.w + bID]);
 		Transform boneTx = Lerp(
 			transforms[instData.x + 2u * (1u + bID) + 0u],
 			transforms[instData.x + 2u * (1u + bID) + 1u],
