@@ -62,8 +62,7 @@ public:
 	const MyType& operator[](std::size_t idx) const;
 
 	const auto& GetUpdateList() const { return updateList; }
-	void SetUpdateListUpdateAll() { updateList.SetNeedUpdateAll(); }
-	void SetUpdateListReset() { updateList.ResetNeedUpdateAll(); }
+	      auto& GetUpdateList()       { return updateList; }
 private:
 	StablePosAllocator<MyType> storage;
 	UpdateListMT updateList;
@@ -180,8 +179,7 @@ public:
 	const auto& GetData() const { return storage.GetData(); }
 
 	const auto& GetUpdateList() const { return updateList; }
-	void SetUpdateListUpdateAll() { updateList.SetNeedUpdateAll(); }
-	void SetUpdateListReset() { updateList.ResetNeedUpdateAll(); }
+	      auto& GetUpdateList()       { return updateList; }
 private:
 	UpdateList updateList;
 public:

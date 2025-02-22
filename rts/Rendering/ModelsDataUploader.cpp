@@ -33,14 +33,19 @@
 ////////////////////////////////////////////////////////////////////
 
 namespace Impl {
+	static constexpr uint32_t PERSISTENT_MAPPING_BUFFERING = 3u;
+
 	template<
+		typename DataType,
 		typename SSBO,
 		typename Uploader,
 		typename MemStorage
 	>
 	void UpdateCommon(Uploader& uploader, std::unique_ptr<SSBO>& ssbo, MemStorage& memStorage, const char* className, const char* funcName)
 	{
-		//resize
+		auto& ul = memStorage.GetUpdateList();
+
+		//resize handling
 		const uint32_t elemCount = uploader.GetElemsCount();
 		const uint32_t storageElemCount = memStorage.GetSize();
 		if (storageElemCount > elemCount) {
@@ -49,11 +54,31 @@ namespace Impl {
 			const uint32_t newElemCount = AlignUp(storageElemCount, uploader.GetElemCountIncr());
 			LOG_L(L_DEBUG, "[%s::%s] sizing SSBO %s. New elements count = %u, elemCount = %u, storageElemCount = %u", className, funcName, "up", newElemCount, elemCount, storageElemCount);
 			ssbo->Resize(newElemCount);
+
+			if (!ssbo->IsValid()) {
+				LOG_L(L_ERROR, "[%s::%s] Resizing of IStreamBuffer<%s> of type %d, failed. Falling back to SB_BUFFERSUBDATA.", className, __func__, spring::TypeToCStr<DataType>(), static_cast<int>(ssbo->GetBufferImplementation()));
+				ssbo = nullptr;
+
+				IStreamBufferConcept::StreamBufferCreationParams p;
+				p.target = GL_SHADER_STORAGE_BUFFER;
+				p.numElems = newElemCount;
+				p.name = std::string(className);
+				p.type = IStreamBufferConcept::Types::SB_BUFFERSUBDATA;
+				p.resizeAble = true;
+				p.coherent = false;
+				p.numBuffers = 1;
+				p.optimizeForStreaming = true;
+
+				// must match p.numBuffers
+				ul.SetTrueValue(1);
+
+				ssbo = std::move(IStreamBuffer<DataType>::CreateInstance(p));
+			}
+
 			// ssbo->Resize() doesn't copy the data, force the update
-			memStorage.SetUpdateListUpdateAll();
+			ul.SetNeedUpdateAll();
 		}
 
-		const auto& ul = memStorage.GetUpdateList();
 		if (!ul.NeedUpdate())
 			return;
 
@@ -70,7 +95,9 @@ namespace Impl {
 			auto* mappedPtr = ssbo->Map(clientPtr, idxOffset, idxSize);
 
 			if (!ssbo->HasClientPtr())
-				memcpy(mappedPtr, clientPtr, storageElemCount * sizeof(decltype(*clientPtr)));
+				std::copy(clientPtr + idxOffset, clientPtr + idxOffset + idxSize, mappedPtr);
+
+			ul.DecrementUpdate(itPair.value());
 
 			ssbo->Unmap();
 		}
@@ -78,11 +105,15 @@ namespace Impl {
 		ssbo->BindBufferRange(uploader.GetBindingIdx());
 		ssbo->SwapBuffer();
 
-		memStorage.SetUpdateListReset();
+		ul.CalcNeedUpdateAll();
 	}
 
-	template<typename DataType, typename SSBO>
-	void InitCommon(std::unique_ptr<SSBO>& ssbo, uint32_t bindingIdx, uint32_t elemCount0, uint32_t elemCountIncr, IStreamBufferConcept::Types type, bool coherent, uint32_t numBuffers, const char* className)
+	template <
+		typename DataType,
+		typename SSBO,
+		typename MemStorage
+	>
+	void InitCommon(std::unique_ptr<SSBO>& ssbo, MemStorage& memStorage, uint32_t bindingIdx, uint32_t elemCount0, uint32_t elemCountIncr, IStreamBufferConcept::Types type, bool coherent, uint32_t numBuffers, const char* className)
 	{
 		if (!globalRendering->haveGL4)
 			return;
@@ -99,7 +130,26 @@ namespace Impl {
 		p.numBuffers = numBuffers;
 		p.optimizeForStreaming = true;
 
+		auto& ul = memStorage.GetUpdateList();
+
+		// must match p.numBuffers
+		ul.SetTrueValue(static_cast<uint8_t>(numBuffers));
+
 		ssbo = std::move(IStreamBuffer<DataType>::CreateInstance(p));
+		if (!ssbo->IsValid()) {
+			LOG_L(L_ERROR, "[%s::%s] Initialization of IStreamBuffer<%s> of type %d, failed. Falling back to SB_BUFFERSUBDATA.", className, __func__, spring::TypeToCStr<DataType>(), static_cast<int>(type));
+			ssbo = nullptr;
+
+			p.type = IStreamBufferConcept::Types::SB_BUFFERSUBDATA;
+			p.coherent = false;
+			p.numBuffers = 1;
+
+			// must match p.numBuffers
+			ul.SetTrueValue(1);
+
+			ssbo = std::move(IStreamBuffer<DataType>::CreateInstance(p));
+		}
+
 		ssbo->BindBufferRange(bindingIdx);
 	}
 
@@ -123,10 +173,15 @@ ModelUniformsUploader modelUniformsUploader;
 
 void TransformsUploader::Init()
 {
+	const auto sbType = globalRendering->supportPersistentMapping
+		? IStreamBufferConcept::Types::SB_PERSISTENTMAP
+		: IStreamBufferConcept::Types::SB_BUFFERSUBDATA;
+
 	Impl::InitCommon<MyDataType>(
 		ssbo,
+		transformsMemStorage,
 		MATRIX_SSBO_BINDING_IDX, ELEM_COUNT0, ELEM_COUNTI,
-		IStreamBufferConcept::Types::SB_BUFFERSUBDATA, true, 1,
+		sbType, true, Impl::PERSISTENT_MAPPING_BUFFERING,
 		className
 	);
 }
@@ -143,10 +198,15 @@ void TransformsUploader::Update()
 
 	SCOPED_TIMER("TransformsUploader::Update");
 
-	// TODO why the lock?
-	auto lock = CModelsLock::GetScopedLock();
+	//auto lock = CModelsLock::GetScopedLock();
 
-	Impl::UpdateCommon(*this, ssbo, transformsMemStorage, className, __func__);
+	Impl::UpdateCommon<MyDataType>(
+		*this,
+		ssbo,
+		transformsMemStorage,
+		className,
+		__func__
+	);
 }
 
 size_t TransformsUploader::GetElemOffset(const UnitDef* def) const
@@ -269,6 +329,7 @@ void ModelUniformsUploader::Init()
 
 	Impl::InitCommon<MyDataType>(
 		ssbo,
+		modelUniformsStorage,
 		MATUNI_SSBO_BINDING_IDX, ELEM_COUNT0, ELEM_COUNTI,
 		IStreamBufferConcept::Types::SB_BUFFERSUBDATA, true, 1,
 		className
@@ -284,7 +345,7 @@ void ModelUniformsUploader::Update()
 {
 	SCOPED_TIMER("ModelUniformsUploader::Update");
 
-	Impl::UpdateCommon(*this, ssbo, modelUniformsStorage, className, __func__);
+	Impl::UpdateCommon<MyDataType>(*this, ssbo, modelUniformsStorage, className, __func__);
 }
 
 size_t ModelUniformsUploader::GetElemOffset(const UnitDef* def) const
