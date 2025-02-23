@@ -82,9 +82,9 @@ float3 CQuaternion::ToEulerYPR() const
 	float r32 =  r * r - x * x + y * y - z * z;
 
 	return {
-		math::asin(r21),       // CMatrix44f::ANGLE_P
-		math::atan2(r11, r12), // CMatrix44f::ANGLE_Y
-		math::atan2(r31, r32)  // CMatrix44f::ANGLE_R
+		math::asin(std::clamp(r21, -1.0f, 1.0f)), // CMatrix44f::ANGLE_P
+		math::atan2(r11, r12),                    // CMatrix44f::ANGLE_Y
+		math::atan2(r31, r32)                     // CMatrix44f::ANGLE_R
 	};
 }
 
@@ -103,9 +103,9 @@ float3 CQuaternion::ToEulerPYR() const
 	float r32 =  r * r + x * x - y * y - z * z;
 
 	return {
-		math::atan2(r11, r12), // CMatrix44f::ANGLE_P
-		math::asin(r21),       // CMatrix44f::ANGLE_Y
-		math::atan2(r31, r32)  // CMatrix44f::ANGLE_R
+		math::atan2(r11, r12),                    // CMatrix44f::ANGLE_P
+		math::asin(std::clamp(r21, -1.0f, 1.0f)), // CMatrix44f::ANGLE_Y
+		math::atan2(r31, r32)                     // CMatrix44f::ANGLE_R
 	};
 }
 

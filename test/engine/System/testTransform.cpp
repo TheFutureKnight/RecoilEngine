@@ -249,9 +249,8 @@ TEST_CASE("EulerYPR")
 			srandf() * math::PI
 		};
 
-		// Bugged / numerically unstable?
 		CQuaternion qYPR1 = CQuaternion::FromEulerYPR(angles);
-		auto anglesYPR = qYPR1.ToEulerPYR();
+		auto anglesYPR = qYPR1.ToEulerYPR();
 		CQuaternion qYPR2 = CQuaternion::FromEulerYPR(anglesYPR);
 
 		const float3 v{ srandf() * 100.0f, srandf() * 100.0f, srandf() * 100.0f };
