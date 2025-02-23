@@ -487,7 +487,7 @@ LocalModelPiece::LocalModelPiece(const S3DModelPiece* piece)
 	dir = piece->GetEmitDir(); // warning investigated, seems fake
 
 	pieceSpaceTra = CalcPieceSpaceTransform(pos, rot, original->scale);
-	prevModelSpaceTra = {};
+	prevModelSpaceTra = Transform{ };
 
 	children.reserve(piece->children.size());
 }

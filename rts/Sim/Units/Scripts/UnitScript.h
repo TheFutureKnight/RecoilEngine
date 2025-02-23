@@ -87,7 +87,7 @@ public:
 #define SCRIPT_TO_LOCALPIECE_FUNC(RetType, ScriptFunc, PieceFunc)       \
 	RetType ScriptFunc(int scriptPieceNum) const {                      \
 		if (!PieceExists(scriptPieceNum))                               \
-			return {};                                                  \
+			return RetType{};                                           \
 		LocalModelPiece* p = GetScriptLocalModelPiece(scriptPieceNum);  \
 		return (p->PieceFunc());                                        \
 	}
