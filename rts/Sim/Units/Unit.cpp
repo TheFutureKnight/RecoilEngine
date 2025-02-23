@@ -1,4 +1,3 @@
-#include "Unit.h"
 /* This file is part of the Spring engine (GPL v2 or later), see LICENSE.html */
 
 #include "UnitDef.h"
@@ -18,8 +17,6 @@
 #include "CommandAI/FactoryCAI.h"
 #include "CommandAI/AirCAI.h"
 #include "CommandAI/BuilderCAI.h"
-#include "CommandAI/CommandAI.h"
-#include "CommandAI/FactoryCAI.h"
 #include "CommandAI/MobileCAI.h"
 #include "CommandAI/BuilderCaches.h"
 
