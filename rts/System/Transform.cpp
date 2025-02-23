@@ -41,7 +41,7 @@ Transform Transform::FromMatrix(const CMatrix44f& mat)
 {
 	Transform tra;
 	float3 scale;
-	std::tie(tra.t, tra.r, scale) = CQuaternion::DecomposeIntoTRS(mat);
+	std::tie(tra.t, tra.r, scale) = mat.DecomposeIntoTRS();
 	assert(
 		epscmp(scale.x, scale.y, std::max(scale.x, scale.y) * float3::cmp_eps()) &&
 		epscmp(scale.y, scale.z, std::max(scale.y, scale.z) * float3::cmp_eps()) &&

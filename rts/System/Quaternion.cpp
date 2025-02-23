@@ -2,6 +2,7 @@
 
 #include "Quaternion.h"
 #include "System/SpringMath.h"
+#include "Game/GlobalUnsynced.h"
 
 //contains some code from
 // https://github.com/ilmola/gml/blob/master/include/gml/quaternion.hpp
@@ -48,7 +49,7 @@ CQuaternion CQuaternion::FromEulerPYR(const float3& angles)
 
 	CMatrix44f m; m.RotateEulerXYZ(-angles);
 	CQuaternion pyrQ3;
-	std::tie(std::ignore, pyrQ3, std::ignore) = DecomposeIntoTRS(m);
+	std::tie(std::ignore, pyrQ3, std::ignore) = m.DecomposeIntoTRS();
 
 	assert(pyrQ.equals(pyrQ2));
 	assert(pyrQ.equals(pyrQ3));
@@ -72,10 +73,10 @@ CQuaternion CQuaternion::FromEulerYPR(const float3& angles)
 	const float cr = math::cos(angles[CMatrix44f::ANGLE_R] * 0.5f);
 
 	CQuaternion yprQ{
-		cr* cy* sp + cp * sr * sy,
-		cp* cr* sy - cy * sp * sr,
-		cp* cy* sr - cr * sp * sy,
-		cp* cr* cy + sp * sr * sy
+		cr * cy * sp + cp * sr * sy,
+		cp * cr * sy - cy * sp * sr,
+		cp * cy * sr - cr * sp * sy,
+		cp * cr * cy + sp * sr * sy
 	};
 #ifdef QUATERNION_EULER_DEBUG
 	static constexpr auto pAxis = float3(1, 0, 0);
@@ -85,12 +86,89 @@ CQuaternion CQuaternion::FromEulerYPR(const float3& angles)
 
 	CMatrix44f m; m.RotateEulerYXZ(-angles);
 	CQuaternion yprQ3;
-	std::tie(std::ignore, yprQ3, std::ignore) = DecomposeIntoTRS(m);
+	std::tie(std::ignore, yprQ3, std::ignore) = m.DecomposeIntoTRS();
 
 	assert(yprQ.equals(yprQ2));
 	assert(yprQ2.equals(yprQ3));
+#if 0
+	{
+		float3 ang = guRNG.NextVector() * math::PI;
+		auto yprQ2 = CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_Y], yAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_P], pAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_R], rAxis);
+
+		CMatrix44f m; m.RotateEulerYXZ(-ang);
+		CQuaternion yprQ3;
+		std::tie(std::ignore, yprQ3, std::ignore) = DecomposeIntoTRS(m);
+
+		auto angV = m.GetEulerAnglesLftHand();
+
+		float3 res = yprQ2.ToEulerYPR();
+
+		CMatrix44f m2; m2.RotateEulerYXZ(-res);
+		CMatrix44f m3 = yprQ2.ToRotMatrix();
+		assert(m2.equals(m3));
+	}
+	{
+		float3 ang = guRNG.NextVector() * math::PI;
+		auto pyrQ2 = CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_P], pAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_Y], yAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_R], rAxis);
+
+		CMatrix44f m; m.RotateEulerXYZ(-ang);
+		CQuaternion pyrQ3;
+		std::tie(std::ignore, pyrQ3, std::ignore) = DecomposeIntoTRS(m);
+
+		auto angV = m.GetEulerAnglesLftHand();
+
+		float3 res = pyrQ2.ToEulerPYR();
+
+		CMatrix44f m2; m2.RotateEulerXYZ(-res);
+		CMatrix44f m3 = pyrQ2.ToRotMatrix();
+		assert(m2.equals(m3));
+	}
+#endif
+
 #endif
 	return AssertNormalized(yprQ);
+}
+
+/// <summary>
+/// Return YPR Euler angles, so that
+/// CMatrix44f::RotateEulerYXZ(-ang) == CQuaternion::ToRotMatrix()
+/// Note that for m = CMatrix44f::RotateEulerYXZ(-in), out = m.CQuaternion::ToEulerYPR()
+/// `in` may not be equal to `out`, but they still produce the same matrix
+/// </summary>
+float3 CQuaternion::ToEulerYPR() const
+{
+	float r11 =  2.0f * (x * z + r * y);
+	float r12 =  r * r - x * x - y * y + z * z;
+	float r21 = -2.0f * (y * z - r * x);
+	float r31 =  2.0f * (x * y + r * z);
+	float r32 =  r * r - x * x + y * y - z * z;
+
+	return {
+		math::asin(r21),       // CMatrix44f::ANGLE_P
+		math::atan2(r11, r12), // CMatrix44f::ANGLE_Y
+		math::atan2(r31, r32)  // CMatrix44f::ANGLE_R
+	};
+}
+
+/// <summary>
+/// Return PYR Euler angles, so that
+/// CMatrix44f::RotateEulerXYZ(-ang) == CQuaternion::ToRotMatrix()
+/// Note that for m = CMatrix44f::RotateEulerXYZ(-in), out = m.CQuaternion::ToEulerPYR()
+/// `in` may not be equal to `out`, but they still produce the same matrix
+/// </summary>
+float3 CQuaternion::ToEulerPYR() const
+{
+	float r11 = -2.0f * (y * z - r * x);
+	float r12 =  r * r - x * x - y * y + z * z;
+	float r21 =  2.0f * (x * z + r * y);
+	float r31 = -2.0f * (x * y - r * z);
+	float r32 =  r * r + x * x - y * y - z * z;
+
+	return {
+		math::atan2(r11, r12), // CMatrix44f::ANGLE_P
+		math::asin(r21),       // CMatrix44f::ANGLE_Y
+		math::atan2(r31, r32)  // CMatrix44f::ANGLE_R
+	};
 }
 
 /// <summary>
@@ -220,45 +298,6 @@ const CQuaternion& CQuaternion::AssertNormalized(const CQuaternion& q)
 	assert(q.Normalized());
 	return q;
 }
-
-/// <summary>
-/// Decompose a transformation matrix into translate, rotation (Quaternion), scale components
-/// </summary>
-std::tuple<float3, CQuaternion, float3>  CQuaternion::DecomposeIntoTRS(const CMatrix44f& mat)
-{
-	CMatrix44f tmpMat = mat;
-	float4& t0 = tmpMat.col[0];
-	float4& t1 = tmpMat.col[1];
-	float4& t2 = tmpMat.col[2];
-
-	const float4& c0 = mat.col[0];
-	const float4& c1 = mat.col[1];
-	const float4& c2 = mat.col[2];
-
-	const float d = tmpMat.Det3();
-	const float s = Sign(d);
-
-	float3 scaling {s * c0.Length(), c1.Length(), c2.Length()};
-
-	assert(
-		!epscmp(scaling[0], 0.0f, float3::cmp_eps()) &&
-		!epscmp(scaling[1], 0.0f, float3::cmp_eps()) &&
-		!epscmp(scaling[2], 0.0f, float3::cmp_eps())
-	);
-
-	t0 /= scaling[0];
-	t1 /= scaling[1];
-	t2 /= scaling[2];
-
-	assert(tmpMat.IsRotOrRotTranMatrix());
-
-	return std::make_tuple(
-		float3(mat.col[3]),             //translate
-		CQuaternion::MakeFrom(tmpMat),  //rotate (quat)
-		scaling                         //scale
-	);
-}
-
 
 bool CQuaternion::Normalized() const
 {

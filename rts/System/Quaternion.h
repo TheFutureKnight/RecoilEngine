@@ -52,14 +52,18 @@ public:
 	// Euler angles, also known as RotateEulerYXZ
 	static CQuaternion FromEulerYPR(const float3& angles);
 
+	// To Euler angles, YPR/YXZ order
+	float3 ToEulerYPR() const;
+
+	// To Euler angles, PYR/XYZ order
+	float3 ToEulerPYR() const;
+
 	static CQuaternion MakeFrom(float angle, const float3& axis);
 	static CQuaternion MakeFrom(const float3& v1, const float3& v2);
 	static CQuaternion MakeFrom(const float3& newFwdDir);
 	static CQuaternion MakeFrom(const CMatrix44f& mat);
 
 	static const CQuaternion& AssertNormalized(const CQuaternion& q);
-
-	static std::tuple<float3, CQuaternion, float3> DecomposeIntoTRS(const CMatrix44f& mat);
 public:
 	bool Normalized() const;
 	CQuaternion& Normalize();

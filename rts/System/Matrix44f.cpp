@@ -537,6 +537,45 @@ CMatrix44f CMatrix44f::InvertAffine() const
 	return mInv;
 }
 
+/// <summary>
+/// Decompose a transformation matrix into translate, rotation (Quaternion), scale components
+/// </summary>
+std::tuple<float3, CQuaternion, float3> CMatrix44f::DecomposeIntoTRS() const
+{
+	CMatrix44f tmpMat = *this;
+	float4& t0 = tmpMat.col[0];
+	float4& t1 = tmpMat.col[1];
+	float4& t2 = tmpMat.col[2];
+
+	const float4& c0 = col[0];
+	const float4& c1 = col[1];
+	const float4& c2 = col[2];
+	const float4& c3 = col[3];
+
+	const float d = tmpMat.Det3();
+	const float s = Sign(d);
+
+	float3 scaling{ s * c0.Length(), c1.Length(), c2.Length() };
+
+	assert(
+		!epscmp(scaling[0], 0.0f, float3::cmp_eps()) &&
+		!epscmp(scaling[1], 0.0f, float3::cmp_eps()) &&
+		!epscmp(scaling[2], 0.0f, float3::cmp_eps())
+	);
+
+	t0 /= scaling[0];
+	t1 /= scaling[1];
+	t2 /= scaling[2];
+
+	assert(tmpMat.IsRotOrRotTranMatrix());
+
+	return std::make_tuple(
+		float3(c3.x, c3.y, c3.z),       //translate
+		CQuaternion::MakeFrom(tmpMat),  //rotate (quat)
+		scaling                         //scale
+	);
+}
+
 
 template<typename T>
 static inline T CalculateCofactor(const T m[4][4], const int ei, const int ej)
