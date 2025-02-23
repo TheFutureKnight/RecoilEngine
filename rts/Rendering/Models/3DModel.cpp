@@ -521,37 +521,6 @@ void LocalModelPiece::UpdateChildTransformRec(bool updateChildTransform) const
 {
 	RECOIL_DETAILED_TRACY_ZONE;
 
-	/*
-	{
-		const auto pt = guRNG.NextVector() * 1000.0f;
-		const auto pr = guRNG.NextVector() * 2.0f * math::PI;
-		const auto ps = (guRNG.NextFloat24() + 0.5f);
-
-		const auto pTra = Transform(CQuaternion::FromEulerYPRNeg(pr), pt, float3{ ps });
-
-		const auto ct = guRNG.NextVector() * 1000.0f;
-		const auto cr = guRNG.NextVector() * 2.0f * math::PI;
-		const auto cs = (guRNG.NextFloat24() + 0.5f);
-
-		const auto cTra = Transform(CQuaternion::FromEulerYPRNeg(cr), ct, float3{ cs });
-
-		const auto cTraUpd = pTra * cTra;
-
-		const auto pMat = pTra.ToMatrix();
-		const auto cMat = cTra.ToMatrix();
-		const auto cMatUpd = pMat * cMat;
-		const auto [_t, _r, _s] = CQuaternion::DecomposeIntoTRS(cMatUpd);
-
-		const auto cMatUpd2 = cTraUpd.ToMatrix();
-
-		auto cTraUpd2 = Transform::FromMatrix(cMatUpd);
-
-		//assert(cTraUpd.equals(cTraUpd2));
-
-		assert(cMatUpd == cMatUpd2);
-	}
-	*/
-
 	if (dirty) {
 		dirty = false;
 		updateChildTransform = true;

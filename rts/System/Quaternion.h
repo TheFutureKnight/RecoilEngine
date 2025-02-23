@@ -15,7 +15,7 @@ class alignas(16) CQuaternion
 public:
 	CR_DECLARE_STRUCT(CQuaternion)
 public:
-	constexpr CQuaternion()
+	explicit constexpr CQuaternion()
 		: x(0.0f)
 		, y(0.0f)
 		, z(0.0f)
@@ -118,7 +118,7 @@ public:
 
 	void AssertNaNs() const;
 private:
-	float SqNorm() const;
+	constexpr float SqNorm() const { return (x * x + y * y + z * z + r * r); }
 	static float InvSqrt(float f);
 public:
 	static CQuaternion Lerp (const CQuaternion& q1, const CQuaternion& q2, const float a);

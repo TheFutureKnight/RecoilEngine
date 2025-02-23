@@ -2,15 +2,12 @@
 
 #include "Quaternion.h"
 #include "System/SpringMath.h"
-#include "Game/GlobalUnsynced.h"
 
 //contains some code from
 // https://github.com/ilmola/gml/blob/master/include/gml/quaternion.hpp
 // https://github.com/ilmola/gml/blob/master/include/gml/mat.hpp
 // https://github.com/g-truc/glm/blob/master/glm/ext/quaternion_common.inl
 // Also nice source https://www.shadertoy.com/view/fdtfWM
-
-#define QUATERNION_EULER_DEBUG
 
 CR_BIND(CQuaternion, )
 CR_REG_METADATA(CQuaternion, (
@@ -41,19 +38,7 @@ CQuaternion CQuaternion::FromEulerPYR(const float3& angles)
 		cp * cy * sr + cr * sp * sy,
 		cp * cr * cy - sp * sr * sy
 	};
-#ifdef QUATERNION_EULER_DEBUG
-	static constexpr auto pAxis = float3(1, 0, 0);
-	static constexpr auto yAxis = float3(0, 1, 0);
-	static constexpr auto rAxis = float3(0, 0, 1);
-	auto pyrQ2 = CQuaternion::MakeFrom(angles[CMatrix44f::ANGLE_P], pAxis) * CQuaternion::MakeFrom(angles[CMatrix44f::ANGLE_Y], yAxis) * CQuaternion::MakeFrom(angles[CMatrix44f::ANGLE_R], rAxis);
 
-	CMatrix44f m; m.RotateEulerXYZ(-angles);
-	CQuaternion pyrQ3;
-	std::tie(std::ignore, pyrQ3, std::ignore) = m.DecomposeIntoTRS();
-
-	assert(pyrQ.equals(pyrQ2));
-	assert(pyrQ.equals(pyrQ3));
-#endif
 	return AssertNormalized(pyrQ);
 }
 
@@ -78,54 +63,7 @@ CQuaternion CQuaternion::FromEulerYPR(const float3& angles)
 		cp * cy * sr - cr * sp * sy,
 		cp * cr * cy + sp * sr * sy
 	};
-#ifdef QUATERNION_EULER_DEBUG
-	static constexpr auto pAxis = float3(1, 0, 0);
-	static constexpr auto yAxis = float3(0, 1, 0);
-	static constexpr auto rAxis = float3(0, 0, 1);
-	auto yprQ2 = CQuaternion::MakeFrom(angles[CMatrix44f::ANGLE_Y], yAxis) * CQuaternion::MakeFrom(angles[CMatrix44f::ANGLE_P], pAxis) * CQuaternion::MakeFrom(angles[CMatrix44f::ANGLE_R], rAxis);
 
-	CMatrix44f m; m.RotateEulerYXZ(-angles);
-	CQuaternion yprQ3;
-	std::tie(std::ignore, yprQ3, std::ignore) = m.DecomposeIntoTRS();
-
-	assert(yprQ.equals(yprQ2));
-	assert(yprQ2.equals(yprQ3));
-#if 0
-	{
-		float3 ang = guRNG.NextVector() * math::PI;
-		auto yprQ2 = CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_Y], yAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_P], pAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_R], rAxis);
-
-		CMatrix44f m; m.RotateEulerYXZ(-ang);
-		CQuaternion yprQ3;
-		std::tie(std::ignore, yprQ3, std::ignore) = DecomposeIntoTRS(m);
-
-		auto angV = m.GetEulerAnglesLftHand();
-
-		float3 res = yprQ2.ToEulerYPR();
-
-		CMatrix44f m2; m2.RotateEulerYXZ(-res);
-		CMatrix44f m3 = yprQ2.ToRotMatrix();
-		assert(m2.equals(m3));
-	}
-	{
-		float3 ang = guRNG.NextVector() * math::PI;
-		auto pyrQ2 = CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_P], pAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_Y], yAxis) * CQuaternion::MakeFrom(ang[CMatrix44f::ANGLE_R], rAxis);
-
-		CMatrix44f m; m.RotateEulerXYZ(-ang);
-		CQuaternion pyrQ3;
-		std::tie(std::ignore, pyrQ3, std::ignore) = DecomposeIntoTRS(m);
-
-		auto angV = m.GetEulerAnglesLftHand();
-
-		float3 res = pyrQ2.ToEulerPYR();
-
-		CMatrix44f m2; m2.RotateEulerXYZ(-res);
-		CMatrix44f m3 = pyrQ2.ToRotMatrix();
-		assert(m2.equals(m3));
-	}
-#endif
-
-#endif
 	return AssertNormalized(yprQ);
 }
 
@@ -222,7 +160,7 @@ CQuaternion CQuaternion::MakeFrom(const float3& v1, const float3& v2)
 	}
 	else {
 		const auto cp = v1.cross(v2);
-		return CQuaternion(cp, 1.0f + dp).Normalize();
+		return CQuaternion(cp, 1.0f + dp).ANormalize();
 	}
 #endif
 }
@@ -353,21 +291,12 @@ CMatrix44f CQuaternion::ToRotMatrix() const
 	const float qry = r * y;
 	const float qrz = r * z;
 
-#if 0
-	return CMatrix44f(
-		1.0f - 2.0f * (qyy + qzz), 2.0f * (qxy - qrz)       , 2.0f * (qxz + qry)       , 0.0f,
-		2.0f * (qxy + qrz)       , 1.0f - 2.0f * (qxx + qzz), 2.0f * (qyz - qrx)       , 0.0f,
-		2.0f * (qxz - qry)       , 2.0f * (qyz + qrx)       , 1.0f - 2.0f * (qxx + qyy), 0.0f,
-		0.0f                     , 0.0f                     , 0.0f                     , 1.0f
-	);
-#else
 	return CMatrix44f(
 		1.0f - 2.0f * (qyy + qzz), 2.0f * (qxy + qrz)       , 2.0f * (qxz - qry)       , 0.0f,
 		2.0f * (qxy - qrz)       , 1.0f - 2.0f * (qxx + qzz), 2.0f * (qyz + qrx)       , 0.0f,
 		2.0f * (qxz + qry)       , 2.0f * (qyz - qrx)       , 1.0f - 2.0f * (qxx + qyy), 0.0f,
 		0.0f                     , 0.0f                     , 0.0f                     , 1.0f
 	);
-#endif
 }
 
 float3 CQuaternion::Rotate(const float3& v) const
@@ -386,7 +315,7 @@ float3 CQuaternion::Rotate(const float3& v) const
 
 float4 CQuaternion::Rotate(const float4& v) const
 {
-	return float4{ Rotate(static_cast<float3>(v)), v.w };
+	return float4{ Rotate(float3(v.xyz)), v.w };
 }
 
 bool CQuaternion::equals(const CQuaternion& rhs) const
@@ -484,10 +413,6 @@ void CQuaternion::AssertNaNs() const
 	assert(!math::isnan(y) && !math::isinf(y));
 	assert(!math::isnan(z) && !math::isinf(z));
 	assert(!math::isnan(r) && !math::isinf(r));
-}
-
-float CQuaternion::SqNorm() const {
-	return (x * x + y * y + z * z + r * r);
 }
 
 float CQuaternion::InvSqrt(float f)

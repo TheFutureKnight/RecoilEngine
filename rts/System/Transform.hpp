@@ -12,7 +12,7 @@ struct Transform {
 	float3 t;
 	float s;
 
-	constexpr Transform()
+	explicit constexpr Transform()
 		: r{ CQuaternion{} }
 		, t{ float3{} }
 		, s{ 1.0f }
