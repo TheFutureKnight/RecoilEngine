@@ -61,7 +61,7 @@ TEST_CASE("VertexTransformation")
 		auto vMatN = vMat; vMatN.Normalize();
 		auto vTraN = vTra; vTraN.Normalize();
 
-		CHECK(math::fabs(1.0f - vMatN.dot(vTraN)) < 0.05f);
+		CHECK(math::fabs(1.0f - vMatN.dot(vTraN)) < float3::cmp_eps());
 	}
 }
 
@@ -123,7 +123,7 @@ TEST_CASE("TransformChaining")
 		auto vMatN = vMat; vMatN.Normalize();
 		auto vTraN = vTra; vTraN.Normalize();
 
-		CHECK(math::fabs(1.0f - vMatN.dot(vTraN)) < 0.05f);
+		CHECK(math::fabs(1.0f - vMatN.dot(vTraN)) < float3::cmp_eps());
 	}
 }
 
@@ -162,7 +162,7 @@ TEST_CASE("AffineInversion")
 		auto vMatN = vMat; vMatN.Normalize();
 		auto vTraN = vTra; vTraN.Normalize();
 
-		CHECK(math::fabs(1.0f - vMatN.dot(vTraN)) < 0.05f);
+		CHECK(math::fabs(1.0f - vMatN.dot(vTraN)) < float3::cmp_eps());
 	}
 }
 
@@ -236,7 +236,7 @@ TEST_CASE("EulerPYR")
 		auto v1N = v1; v1N.Normalize();
 		auto v2N = v2; v2N.Normalize();
 
-		CHECK(math::fabs(1.0f - v1N.dot(v2N)) < 0.05f);
+		CHECK(math::fabs(1.0f - v1N.dot(v2N)) < float3::cmp_eps());
 	}
 }
 
@@ -260,6 +260,6 @@ TEST_CASE("EulerYPR")
 		auto v1N = v1; v1N.Normalize();
 		auto v2N = v2; v2N.Normalize();
 
-		CHECK(math::fabs(1.0f - v1N.dot(v2N)) < 0.05f);
+		CHECK(math::fabs(1.0f - v1N.dot(v2N)) < float3::cmp_eps());
 	}
 }
