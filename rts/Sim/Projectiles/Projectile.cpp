@@ -64,6 +64,16 @@ CR_REG_METADATA(CProjectile,
 TypedRenderBuffer<VA_TYPE_C> CProjectile::mmLnsRB = { 1 << 12, 0 };
 TypedRenderBuffer<VA_TYPE_C> CProjectile::mmPtsRB = { 1 << 14, 0 };
 
+namespace Impl {
+	float3 GetNormalizedOrDefaultDir(const float3& dir) {
+		float sqLen = dir.SqLength();
+		if unlikely(sqLen < float3::cmp_eps())
+			return FwdVector;
+
+		return dir * math::isqrt(sqLen);
+	}
+}
+
 CProjectile::CProjectile()
 	: myrange(0.0f)
 	, mygravity((mapInfo != nullptr)? mapInfo->map.gravity: 0.0f)
@@ -88,8 +98,7 @@ CProjectile::CProjectile(
 	, myrange(/*params.weaponDef->range*/0.0f)
 	, mygravity((mapInfo != nullptr)? mapInfo->map.gravity: 0.0f)
 {
-	float3 nDir = dir; nDir.Normalize();
-	preFrameTra = Transform{ CQuaternion::MakeFrom(nDir), pos };
+	preFrameTra = Transform{ CQuaternion::MakeFrom(Impl::GetNormalizedOrDefaultDir(dir)), pos };
 	SetRadiusAndHeight(1.7f, 0.0f);
 	Init(owner, ZeroVector);
 }
@@ -131,8 +140,8 @@ void CProjectile::Init(const CUnit* owner, const float3& offset)
 	if (synced && !weapon)
 		quadField.AddProjectile(this);
 
-	float3 nDir = dir; nDir.Normalize();
-	preFrameTra = Transform{ CQuaternion::MakeFrom(nDir), pos };
+
+	preFrameTra = Transform{ CQuaternion::MakeFrom(Impl::GetNormalizedOrDefaultDir(dir)), pos };
 }
 
 
@@ -156,8 +165,7 @@ void CProjectile::Delete()
 
 void CProjectile::PreUpdate()
 {
-	float3 nDir = dir; nDir.Normalize();
-	preFrameTra = Transform{ CQuaternion::MakeFrom(nDir), pos };
+	preFrameTra = Transform{ CQuaternion::MakeFrom(Impl::GetNormalizedOrDefaultDir(dir)), pos };
 }
 
 
