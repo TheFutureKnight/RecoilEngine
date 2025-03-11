@@ -238,15 +238,15 @@ void GetModelSpaceVertex(out vec4 msPosition, out vec3 msNormal)
 	
 	Transform tx;
 	if (staticModel) {
-		tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u];
+		tx = transforms[instData.x + bID0];
 	} else {
 		// do interpolation
 		tx = Lerp(
-			transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 0u],
-			transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u],
+			transforms[instData.x + 2u * (1u + bID0) + 0u],
+			transforms[instData.x + 2u * (1u + bID0) + 1u],
 			timeInfo.w
 		);
-		//tx = transforms[instData.x + 2u * uint(!staticModel) + 2u * bID0 + 1u];
+		//tx = transforms[instData.x + 2u * (1u + bID0) + 1u];
 	}
 
 	weights[0] *= float(tx.trSc.w > 0.0);
